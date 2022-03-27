@@ -291,7 +291,6 @@ copy_remote_files() {
 create_ssh_key() {
     rm -f $KEYFILE
     rm -f $KEYFILE.pub
-    cleanup_hostname
     echo "Please enter the root password of the remote machine."
     ssh-keygen -q -N "" -C "spacewalk-migration-key" -f $KEYFILE
     ssh-copy-id -i $KEYFILE root@$SATELLITE_IP > /dev/null 2>&1
@@ -379,21 +378,6 @@ check_remote_type() {
     echo "Found $SERVER_CRT and $SERVER_KEY on source system."
 }
 
-postgres_fast() {
-    cp -a /var/lib/pgsql/data/postgresql.conf /var/lib/pgsql/data/postgresql.conf.migrate
-    echo "fsync = off" >> /var/lib/pgsql/data/postgresql.conf
-    echo "full_page_writes = off" >> /var/lib/pgsql/data/postgresql.conf
-    echo "checkpoint_completion_target = 0.9" >> /var/lib/pgsql/data/postgresql.conf
-    systemctl restart postgresql
-}
-
-postgres_safe() {
-    if [ -f /var/lib/pgsql/data/postgresql.conf.migrate ]; then
-        mv /var/lib/pgsql/data/postgresql.conf.migrate /var/lib/pgsql/data/postgresql.conf
-        systemctl restart postgresql
-    fi
-}
-
 do_migration() {
     if [ ! -d $TMPDIR ]; then
         echo "$TMPDIR does not exist; creating it..."
@@ -431,7 +415,6 @@ do_migration() {
     MANAGER_PASS=$SATELLITE_DB_PASS
     MANAGER_PASS2=$SATELLITE_DB_PASS
 
-    setup_hostname
 
     # those values will be overwritten by the copied certificate
     CERT_CNAMES=""
@@ -485,7 +468,6 @@ do_migration() {
         systemctl --quiet disable jabberd 2>&1
     fi
 
-    cleanup_hostname
     remove_ssh_key
     if [ -d /root/.ssh.new ]; then
         mv /root/.ssh /root/.ssh.orig
@@ -508,9 +490,6 @@ do_migration() {
 
 PROGRAM="$0"
 
-# clean up fake hostname in /etc/hosts in case of previous error
-cleanup_hostname
-
 while [ -n "$1" ]
 do
     p="$1"
@@ -520,7 +499,7 @@ do
         . $MIGRATION_ENV 2> /dev/null
         . $SETUP_ENV
         SATELLITE_FQDN="$SATELLITE_HOST.$SATELLITE_DOMAIN"
-        SATELLITE_IP=`getent hosts $SATELLITE_FQDN | cut -f 1 -d " "`
+        SATELLITE_IP="$SATELLITE_IP"
         check_btrfs_dirs
         create_ssh_key
         check_remote_type

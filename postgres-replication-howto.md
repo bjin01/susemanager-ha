@@ -1,11 +1,12 @@
+# Postgresql High Availability Option for SUSE Manager 4.2
 
-On primary suse manager:
+On primary suse manager create a user for replication:
 ```
 sudo -u postgres psql
 CREATE ROLE borep WITH REPLICATION PASSWORD 'testpassword' LOGIN;
 ```
 
-In postgres.conf, after edit restart postgres on primary site.
+In __postgres.conf__, after edit restart postgres on primary site.
 ```
 listen_addresses = '*'
 wal_level = replica
@@ -37,13 +38,12 @@ Make sure the primary_conninfo is correct.
 
 suma1:/var/lib/pgsql/data # cat postgresql.auto.conf
 ```
-primary_conninfo = 'user=borep passfile=''/var/lib/pgsql/.pgpass'' channel_binding=prefer host=172.28.0.5 port=5432 sslmode=prefer sslcompression=0 sslsni=1
-ssl_min_protocol_version=TLSv1.2 gssencmode=prefer krbsrvname=postgres target_session_attrs=any'
+primary_conninfo = 'user=borep passfile=''/var/lib/pgsql/.pgpass'' channel_binding=prefer host=172.28.0.5 port=5432 sslmode=prefer sslcompression=0 sslsni=1 ssl_min_protocol_version=TLSv1.2 gssencmode=prefer krbsrvname=postgres target_session_attrs=any'
 primary_slot_name = 'boslot1'
 
 ```
 
-Failover - manually:
+## Failover - manually:
 On standby server, postgresql is running in standby mode, primary server is broken and down.
 run below command, must be run as postgres user:
 
@@ -53,7 +53,7 @@ then start suse manager as root user:
 ```spacewalk-service start```
 
 
-Monitor and verifying if replication is working:
+## Monitor and verifying if replication is working:
 ```
 sudo -u postgres psql
 SELECT client_addr, state FROM pg_stat_replication;
