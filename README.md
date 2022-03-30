@@ -1,5 +1,6 @@
 # SUSE Manager / Uyuni - High Availability with postgres streaming replication 
 
+## UNDER CONSTRUCTION still...
 Imagine you have a business critical SUSE Manager for patching and configuration management for a large number of salt minions.
 The headaches starts with thinking about how to make the SUSE Manager host high available to allow patching and configuration with least downtime for the linux systems you manage.
 
