@@ -17,7 +17,7 @@ __But how quick is quick? Is a downtime of SUSE Manager service for e.g. 5 minut
 
 My idea of HA/DR is a more disaster recovery alike scenario for SUSE Manager.
 
-## OK, here is solution I came up with.
+## OK, here is the solution I came up and tested with.
 
 Below architecture shows the DR architecture:
 <p align="center">
