@@ -339,13 +339,38 @@ remove_ssh_key() {
     fi
 }
 
+compare_suma_version () {
+    echo "we get to compare..."
+    ssh -i $KEYFILE -o "StrictHostKeyChecking no" root@$SATELLITE_IP "test -e /usr/share/doc/packages/patterns-suma-server/suma_server.txt"
+    if [ $? -eq 0 ]; then
+       SRC_SUMA_VERSION=$(ssh -i $KEYFILE -o "StrictHostKeyChecking no" root@$SATELLITE_IP "rpm -q  patterns-suma_server")
+       echo $SRC_SUMA_VERSION
+    fi
+    test -e /usr/share/doc/packages/patterns-suma-server/suma_server.txt
+    if [ $? -eq 0 ]; then
+        DST_SUMA_VERSION=$(rpm -q  patterns-suma_server)
+        echo $DST_SUMA_VERSION
+    fi
+    if [[ $SRC_SUMA_VERSION =~ ^patterns-suma_server.* ]] && [[ $DST_SUMA_VERSION =~ ^patterns-suma_server.* ]]; then
+        if [[ $SRC_SUMA_VERSION == $DST_SUMA_VERSION ]]; then
+	    echo "Wow, it looks both SUMA are in same version. Great Job. We continue!"
+            sleep 2
+	else
+            echo "$SRC_SUMA_VERSION $DST_SUMA_VERSION are not in same major and minior version. \
+		bring both SUSE Manager in the exact same version please. we exit here!"
+            exit 2
+       fi
+    fi
+}
+
 check_remote_type() {
     case "$FROMVERSION" in
         3.1)
             echo "Migrating from remote system $PRODUCT_NAME 3.1"
             ;;
         4.2)
-            echo "Migrating from remote system $PRODUCT_NAME 4.2, ho ho ho"
+            echo "Before we start we will double check if both SUSE Manager hosts have same version. "
+            compare_suma_version
             ;;
         *)
             echo
