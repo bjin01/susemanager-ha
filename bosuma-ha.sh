@@ -248,7 +248,10 @@ copy_remote_files() {
                /var/lib/salt
                /var/lib/spacewalk
                /var/log/rhn
-               /var/spacewalk"
+               /var/spacewalk/packages
+               /var/spacewalk/rhn
+               /var/spacewalk/suse
+               /var/spacewalk/systems"
 
     echo "Copy files from old $PRODUCT_NAME..."
 
@@ -257,7 +260,7 @@ copy_remote_files() {
         ssh -i $KEYFILE root@$SATELLITE_IP "test -d $DIR"
         if [ $? -eq 0 ]; then
             echo "`date +"%H:%M:%S"`   Copy $DIR ..."
-            rsync -e "ssh -i $KEYFILE -l root" -avz --ignore-existing root@$SATELLITE_IP:$DIR $DEST >> $RSYNC_LOG
+            rsync -e "ssh -i $KEYFILE -l root" -avz root@$SATELLITE_IP:$DIR $DEST >> $RSYNC_LOG
         else
             echo "`date +"%H:%M:%S"`   Skipping non-existing $DIR ..."
         fi
@@ -278,12 +281,14 @@ copy_remote_files() {
     scp -i $KEYFILE -p root@$SATELLITE_IP:/etc/rhn/rhn.conf /etc/rhn/rhn.conf-$FROMVERSION
 
     # assert correct ownership and permissions
-    chown -R tomcat:tomcat /var/lib/rhn/kickstarts
     chmod 600 /etc/pki/spacewalk/jabberd/server.pem
     chown jabber:jabber /etc/pki/spacewalk/jabberd/server.pem
     chown wwwrun:tftp /srv/tftpboot
     chmod 750 /srv/tftpboot
-    chown -R wwwrun.www /var/spacewalk
+    for i in `ls -I .snapshot /var/spacewalk`
+    do 
+      chown -R wwwrun.www /var/spacewalk/${i}
+    done
     ln -sf /srv/www/htdocs/pub/RHN-ORG-TRUSTED-SSL-CERT /etc/pki/trust/anchors
     update-ca-certificates
 }
