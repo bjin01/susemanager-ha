@@ -248,9 +248,7 @@ copy_remote_files() {
                /var/lib/salt
                /var/lib/spacewalk
                /var/log/rhn
-               /var/spacewalk/packages
                /var/spacewalk/rhn
-               /var/spacewalk/suse
                /var/spacewalk/systems"
 
     echo "Copy files from old $PRODUCT_NAME..."
@@ -285,10 +283,10 @@ copy_remote_files() {
     chown jabber:jabber /etc/pki/spacewalk/jabberd/server.pem
     chown wwwrun:tftp /srv/tftpboot
     chmod 750 /srv/tftpboot
-    for i in `ls -I .snapshot /var/spacewalk`
-    do 
-      chown -R wwwrun.www /var/spacewalk/${i}
-    done
+    chown -R wwwrun.www /var/spacewalk/packages
+    chown -R wwwrun.www /var/spacewalk/rhn
+    chown -R wwwrun.www /var/spacewalk/suse
+    chown -R wwwrun.www /var/spacewalk/systems
     ln -sf /srv/www/htdocs/pub/RHN-ORG-TRUSTED-SSL-CERT /etc/pki/trust/anchors
     update-ca-certificates
 }
