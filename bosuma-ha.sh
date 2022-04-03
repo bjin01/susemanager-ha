@@ -249,7 +249,9 @@ copy_remote_files() {
                /var/lib/spacewalk
                /var/log/rhn
                /var/spacewalk/rhn
-               /var/spacewalk/systems"
+               /var/spacewalk/suse
+               /var/spacewalk/systems
+               /var/spacewalk/packages"
 
     echo "Copy files from old $PRODUCT_NAME..."
 
@@ -485,7 +487,19 @@ do_migration() {
     chown root:${APACHE_GROUP} /etc/rhn/rhn.conf
 }
 
+activate_rhn_conf () {
+    if [ -d /root/.ssh.new ]; then
+        mv /root/.ssh /root/.ssh.orig
+        mv /root/.ssh.new /root/.ssh
+    fi
 
+    mv /etc/rhn/rhn.conf /etc/rhn/rhn.conf.bosuma_backup
+    cp /etc/rhn/rhn.conf-$FROMVERSION /etc/rhn/rhn.conf
+    chmod 640 /etc/rhn/rhn.conf
+    # Detect the Apache group name (SUSE/RHEL differences)
+    APACHE_GROUP=`cut -d: -f3 < <((getent group www)||(getent group apache))`
+    chown root:${APACHE_GROUP} /etc/rhn/rhn.conf
+}
 
 ####################################################
 # Start
@@ -508,6 +522,7 @@ do
         check_remote_type
         copy_remote_files
         remove_ssh_key
+        activate_rhn_conf
        ;;
     -h)
         help
