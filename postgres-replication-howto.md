@@ -6,7 +6,8 @@ sudo -u postgres psql
 CREATE ROLE borep WITH REPLICATION PASSWORD 'testpassword' LOGIN;
 ```
 
-In __postgres.conf__, after edit restart postgres on primary site.
+In __postgresql.conf__ make sure you put below entries into it, after edit restart postgresql.service on the postgresql primary server.
+Make sure the ip address used in the restore_command is the ip of the primary server's ip because when the restore happens it will use scp to copy the archive files over to the standby server.
 ```
 listen_addresses = '*'
 wal_level = replica
@@ -17,17 +18,25 @@ archive_command = 'test ! -f /var/lib/pgsql/data/suma_archive/%f && cp %p /var/l
 restore_command = 'scp 172.28.0.5:/var/lib/pgsql/data/suma_archive/%f %p'
 ```
 
-Or, in other direction:
+Or, if you switch the replication direction make sure you changed the ip of the new primary server in the postgresql.conf:
 ```
 restore_command = 'rsync -avz postgres@172.28.0.10:/var/lib/pgsql/data/suma_archive/%f %p'
 ```
 
-In pg_hba.conf, allow peer suse manager host to connect via port 5432.
+In pg_hba.conf you want to make sure that the postgresql on the SUSE Manager host allow peer standby suse manager server to connect via port 5432.
 ```
 host    replication     borep   172.28.0.10/24   trust
 host    all     all     172.28.0.1/24 md5
 ```
 
+Now we start or restart postgresql on the primary SUSE Manager server.
+```systemctl restart postgresql.service```
+
+Once the primary site is configured for the replication we are ready to start on standby server:
+Login on the standby server as postgres user:
+su - postgres
+
+Create ssh key pair for postgres user and we copy the public key to the authorized_keys file of postgres home_directory on primary server 
 Basebackup command, must be run as postgres user:
 pg_basebackup -h 172.28.0.5 -D /var/lib/pgsql/data -U borep -v -Fp --checkpoint=fast -R --slot=boslot1 -C -Xs
 
