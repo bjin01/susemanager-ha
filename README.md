@@ -1,26 +1,40 @@
 # SUSE Manager / Uyuni - High Availability with postgres streaming replication 
 
 ## UNDER CONSTRUCTION still...
-Imagine you have a business critical SUSE Manager for patching and configuration management for a large number of salt minions.
-The headaches starts with thinking about how to make the SUSE Manager host high available to allow patching and configuration with least downtime for the linux systems you manage.
+Imagine you have a business critical SUSE Manager for patching and configuration management for a large number of systems.
+The headaches starts with thinking about how to make the SUSE Manager server high available in order to allow patching and configuration management with least downtime for the linux systems you manage. *Yes, with least downtime, near zero downtime.*
 
-As we know SUSE Manager is using postgres database to store package meta data and channel meta data. The database can become quite large, several hundred GB depending the number of channels and salt minions you manage will be reached faster than you would expect.
-On the disk of SUSE Manager host all rpms will be stored in /var/spacewalk and is likely to grow as you will sync more and more products and repositories over time. A typical volume size of >500GB for /var/spacewalk is often the case.
+As we know SUSE Manager is using postgres database to store meta data of packages, channels, organizations and users. Over time the database can become quite large, several hundred GB db size, depending the number of channels and salt minions you manage, will be reached faster than you would expect.
+On the disk volumes of SUSE Manager all rpms will be stored in /var/spacewalk and will grow as you will sync more and more products and repositories. A typical volume size of  more than 500GB for /var/spacewalk is often the case.
 
-__Additional obstacles of putting SUSE Manager into a HA are:__
-* And having two SUSE Manager in one datacenter is not really DR capable;
-* But having SUSE Manager in different geographically distanced Datacenter gives you higher network latency and is hard to run in HA. Async could be a good way.
-* what do we do if a customer is using two different public cloud platforms as DR. How can we expect same storage and network backend.
-* last but not least we want to achieve HA/DR without the need to buy additional DR tools. 
+Now what can we do if the SUSE Manager breaks. Break could mean HW defect of hypervisor server, VM disk corrupt or even the datacenter is down etc..
+You have some options to recover:
+* revert back the VM snaphsot but is storage expensive.
+* install a new SUSE Manager and restore db and data but it will take some time.
+* revert to a new blank installed SUSE Manager but without DB data with history and you need to re-register all minions.
 
-But HA is not equal HA. For SUSE Manager most of the customers aim to get SUSE Manager up and running "as quick as possible" again in order to allow patching and configuration management, and of course without loosing old data.
-__But how quick is quick? Is a downtime of SUSE Manager service for e.g. 5 minutes affordable? If yes then continue reading below.__
+__Now we would like to build a HA for SUSE Manager but some concernes must be taken:__
+* having two SUSE Manager in same datacenter is not really disaster recovery capable;
+* But having SUSE Manager in different distanced Datacenters would cause higher network latency and is hard to keep data in sync.
+* what do we do if a customer is using two different public cloud providers. How can we expect same storage and network backend.
+* last but not least we want to achieve HA/DR without additional 3rd party tools and skilled people. 
 
-My idea of HA/DR is a more disaster recovery alike scenario for SUSE Manager.
+On the other handside HA is not equal HA. How much availability is high enough for us?
+Most of the customers aim to get SUSE Manager up and running "as quick as possible" again in order to continue patching and configuration deployment without loosing existing data about minions and channels.
+
+__How about downtime in case of failure? Is a downtime of SUSE Manager for approx. 5 minutes affordable? If yes then continue reading below.__
+
+My approach for HA/DR is to enable a fast standby SUSE Manager recovery that is running in hot-standby mode on different system with different IP. The downtime during fail-over can be kept less than 5 minutes from alert.
 
 ## OK, here is the solution I came up and tested with.
 
-Below architecture shows the DR architecture:
+The solutions consist of two parts:
+* postgres streaming replication to replicate the data to standby server.
+* A bash script using rsync to synchronize files to the standby server. [How-to replicate files](files-replication.md)
+
+Below architecture shows the HA/DR architecture using postgres streaming replication:
+For more information [configure postgres replication](postgres-replication-howto.md)
+
 <p align="center">
 <img src="architecture-DR-SUMA.svg">
 </p>

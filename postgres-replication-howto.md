@@ -14,7 +14,7 @@ After recovery the standby SUSE Manager will become "new primary".
 ## Primary Server configuration:
 On primary suse manager create a user for replication:
 ### Create replication user:
-borep is my chosen user name.
+__borep__ is my chosen user name.
 
 ```
 sudo -u postgres psql
@@ -60,6 +60,7 @@ host    all     all     172.28.0.1/24 md5
 
 ## Secondary Server configuration:
 After the primary site is configured for the replication we are ready to start configure standby server:
+### Use ssh-keys
 Login on the standby server as postgres user:
 su - postgres
 
@@ -67,10 +68,18 @@ Create ssh key pair for postgres user and copy the public key to the authorized_
 ```ssh-keygen``` without passphrase please.
 
 As the postgres user does not have a password set and or even passworth authentication is not allowed in your sshd you will not be able to use ssh-copy-id to add the e.g. id_rsa.pub content to the authorized_keys file.
-So simply copy paste the content to the authorized_keys file.
+So simply copy paste the content of /var/lib/pgsql/.ssh/id_rsa.pub to the /var/lib/pgsql/.ssh/authorized_keys file on primary server.
 
-The next step is to use postgresql command pg_basebackup to make a so called base backup. This means we copy the /var/lib/pgsql/data from primary to the secondary server.
-As you can see from the command below we create a replication slot "boslot1" that will be used for replication.
+### pg_basebackup
+The next step is to use postgresql command ```pg_basebackup``` to make a so-called base-backup. This means we copy the /var/lib/pgsql/data from primary to the secondary server.
+
+Before execute pg_basebackup you have to cleanup the /var/lib/pgsql/data directory.
+You could do it with:
+```rm -rf /var/lib/pgsql/data```
+
+If the /var/lib/pgsql/data is not empty you will get error message from pg_basebackup.
+
+As you can see from the command below we create a replication slot "boslot1" that will be used for replication. Of course you could name the slot as you wish.
 
 Basebackup command, must be run as postgres user:
 pg_basebackup -h 172.28.0.5 -D /var/lib/pgsql/data -U borep -v -Fp --checkpoint=fast -R --slot=boslot1 -C -Xs
