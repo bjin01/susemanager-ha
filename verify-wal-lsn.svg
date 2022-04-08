@@ -116,6 +116,9 @@
    <g id="container-id1">
     <g id="id1" class="Slide" clip-path="url(#presentation_clip_path)">
      <g class="Page">
+      <g id="bg-id1" class="Background">
+       <path fill="rgb(255,255,255)" stroke="none" d="M 10500,29699 L 0,29699 0,0 20999,0 20999,29699 10500,29699 Z"/>
+      </g>
       <g class="Graphic">
        <g>
         <rect class="BoundingBox" stroke="none" fill="none" x="10856" y="8188" width="8945" height="1713"/>
