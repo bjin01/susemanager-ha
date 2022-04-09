@@ -21,29 +21,15 @@ sudo -u postgres psql
 CREATE ROLE borep WITH REPLICATION PASSWORD 'testpassword' LOGIN;
 ```
 
-### Create archive directory
-Login as postgres user and create an archive directory for the WAL Logs.
-```su - postgres -c mkdir -p /var/lib/pgsql/data/suma_archive```
-Feel free to choose different archive directory name as you wish.
-Make sure the newly created archive directory ownership is set to "postgres:postgres"
-
 ### postgresql.conf
 In __postgresql.conf__ make sure you put below entries into it, after edit restart postgresql.service on the postgresql primary server.
-Make sure the ip address used in the restore_command is the ip of the primary server's ip because when the restore happens it will use scp to copy the archive files over to the standby server.
+
 Feel free to use rsync as remote copy/synchronization tool.
 ```
 listen_addresses = '*'
 wal_level = replica
 hot_standby = on
 max_wal_senders = 10
-
-archive_command = 'test ! -f /var/lib/pgsql/data/suma_archive/%f && cp %p /var/lib/pgsql/data/suma_archive/%f'
-restore_command = 'scp 172.28.0.5:/var/lib/pgsql/data/suma_archive/%f %p'
-```
-
-Or, if you switch the replication direction make sure you changed the ip of the new primary server in the postgresql.conf:
-```
-restore_command = 'rsync -avz postgres@172.28.0.10:/var/lib/pgsql/data/suma_archive/%f %p'
 ```
 
 ### Client authentication for replication

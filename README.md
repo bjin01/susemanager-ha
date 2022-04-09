@@ -19,10 +19,10 @@ __Now we would like to build a HA for SUSE Manager but some concernes must be ta
 * what do we do if a customer is using two different public cloud providers. How can we expect same storage and network backend.
 * last but not least we want to achieve HA/DR without additional 3rd party tools and skilled people. 
 
-On the other handside HA is not equal HA. How much availability is high enough for us?
+On the other handside HA is not equal HA. How much availability is high enough for us, 99.999%?
 Most of the customers aim to get SUSE Manager up and running "as quick as possible" again in order to continue patching and configuration deployment without loosing existing data about minions and channels.
 
-__How about downtime in case of failure? Is a downtime of SUSE Manager for approx. 5 minutes affordable? If yes then continue reading below.__
+__How quickly can we fail-over? Is a downtime of SUSE Manager for approx. 5 minutes affordable? If yes then continue reading below.__
 
 My approach for HA/DR is to enable a fast standby SUSE Manager recovery that is running in hot-standby mode on different system with different IP. The downtime during fail-over can be kept less than 5 minutes from alert.
 
