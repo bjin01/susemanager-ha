@@ -7,34 +7,41 @@ The headaches starts with thinking about how to make the SUSE Manager server hig
 As we know SUSE Manager is using local postgres database to store data about packages, channels, organizations and users. Over time the database can become quite large, several hundred GB db size, depending the number of channels and salt minions you manage, will be reached faster than you would expect.
 On the disk volumes of SUSE Manager all rpms will be stored in /var/spacewalk and will grow as you will sync more and more products and repositories. A typical volume size of  more than 500GB for /var/spacewalk is often the case.
 
-Now what can we do if the SUSE Manager breaks. Break could mean HW defect of hypervisor server, VM disk corrupt or even the datacenter is down etc..
+Now what can we do if the SUSE Manager is down.
+
 You have some options to recover:
-* revert back the VM snaphsot but is storage expensive.
-* install a new SUSE Manager and restore db and data but it will take some time.
-* revert to a new blank installed SUSE Manager but without DB data with history and you need to re-register all minions.
+* restore data
+* restore VM snapshot
+* install a new SUSE Manager
 
-__Now we would like to build a HA for SUSE Manager but some concernes must be taken:__
+All above options are quite time consuming and often times need to re-register salt-minions and suse manager proxy servers.
+
+__Now we would like to build a High availability for SUSE Manager but some concernes must be taken:__
 * having two SUSE Manager in same datacenter is not really disaster recovery capable because if the dc fails then all will fail;
-* But having SUSE Manager in different distanced Datacenters would cause higher network latency and is hard to keep data in sync.
-* what do we do if a customer is using two different public cloud providers. How can we expect same storage and network backend.
-* last but not least we want to achieve HA/DR without additional 3rd party tools and skilled people. 
+* but having SUSE Manager in different distanced datacenters would cause higher network latency and is hard to keep data in sync.
+* what do we do if a customer is using two different public cloud providers. We have different storage and network backends.
+* last but not least we want to achieve HA/DR without additional 3rd party tools. 
 
-On the other hand side HA is not equal HA. How much availability is high enough for us, 99.999%?
-Most of the customers aim to get SUSE Manager up and running "as quick as possible" in order to continue patching and configuration deployment without loosing existing data about minions and channels.
+On the other hand side HA is not equal HA. How much availability is good enough for us, 99.999%?
+Most customer's aim is to get SUSE Manager up and running "as quick as possible" in order to continue patching and configuration deployment without loosing existing data about minions and channels.
 
 So the main question is:
 
 __How quickly can we fail-over? Is a downtime of SUSE Manager for approx. 5 minutes affordable? If yes then continue reading below.__
 
-My approach for HA/DR is to enable a fast standby SUSE Manager recovery that is running in hot-standby mode on a different system with different IP. The downtime during fail-over can be kept less than 5 minutes from alert.
+My approach for HA/DR is to enable a fast standby SUSE Manager recovery that is running in hot-standby mode on a different system with different IP. The downtime during fail-over can be kept <5 minutes from alert.
 
-## OK, here is the solution I came up and tested with.
+## OK, here is the solution I came up with.
 
 ## The solution:
-* SUSE Manager host name is managed by __DNS server__. In fail-over scenario the DNS entry must be changed to the IP of standby server.
+* SUSE Manager host name must be managed by __DNS server__. In fail-over scenario the DNS entry must be switched to the IP of standby server.
 * The standby server host name must be changed to the primary hostname during fail-over.
 * postgres streaming replication to replicate the data to standby server.
 * A bash script using rsync to synchronize files to the standby server. [How-to replicate files](files-replication.md)
+
+## What is not in the solution:
+* At the moment SUSE Manager failure monitoring and alerting is not part of the solution, not yet.
+* Automated failover is not part of the solution, not yet, but can be extended easily.
 
 ## The Architecture:
 Below architecture shows the HA/DR architecture using postgres streaming replication:
