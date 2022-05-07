@@ -1,10 +1,10 @@
 # SUSE Manager / Uyuni - High Availability with postgres streaming replication 
 
-## UNDER CONSTRUCTION still...
+## Imagine
 Imagine you have a business critical SUSE Manager for patching and configuration management for a large number of systems.
 The headaches starts with thinking about how to make the SUSE Manager server high available in order to allow patching and configuration management with least downtime for the linux systems you manage. *Yes, with least downtime, near zero downtime.*
 
-As we know SUSE Manager is using postgres database to store meta data of packages, channels, organizations and users. Over time the database can become quite large, several hundred GB db size, depending the number of channels and salt minions you manage, will be reached faster than you would expect.
+As we know SUSE Manager is using local postgres database to store data about packages, channels, organizations and users. Over time the database can become quite large, several hundred GB db size, depending the number of channels and salt minions you manage, will be reached faster than you would expect.
 On the disk volumes of SUSE Manager all rpms will be stored in /var/spacewalk and will grow as you will sync more and more products and repositories. A typical volume size of  more than 500GB for /var/spacewalk is often the case.
 
 Now what can we do if the SUSE Manager breaks. Break could mean HW defect of hypervisor server, VM disk corrupt or even the datacenter is down etc..
@@ -14,24 +14,29 @@ You have some options to recover:
 * revert to a new blank installed SUSE Manager but without DB data with history and you need to re-register all minions.
 
 __Now we would like to build a HA for SUSE Manager but some concernes must be taken:__
-* having two SUSE Manager in same datacenter is not really disaster recovery capable;
+* having two SUSE Manager in same datacenter is not really disaster recovery capable because if the dc fails then all will fail;
 * But having SUSE Manager in different distanced Datacenters would cause higher network latency and is hard to keep data in sync.
 * what do we do if a customer is using two different public cloud providers. How can we expect same storage and network backend.
 * last but not least we want to achieve HA/DR without additional 3rd party tools and skilled people. 
 
-On the other handside HA is not equal HA. How much availability is high enough for us, 99.999%?
-Most of the customers aim to get SUSE Manager up and running "as quick as possible" again in order to continue patching and configuration deployment without loosing existing data about minions and channels.
+On the other hand side HA is not equal HA. How much availability is high enough for us, 99.999%?
+Most of the customers aim to get SUSE Manager up and running "as quick as possible" in order to continue patching and configuration deployment without loosing existing data about minions and channels.
+
+So the main question is:
 
 __How quickly can we fail-over? Is a downtime of SUSE Manager for approx. 5 minutes affordable? If yes then continue reading below.__
 
-My approach for HA/DR is to enable a fast standby SUSE Manager recovery that is running in hot-standby mode on different system with different IP. The downtime during fail-over can be kept less than 5 minutes from alert.
+My approach for HA/DR is to enable a fast standby SUSE Manager recovery that is running in hot-standby mode on a different system with different IP. The downtime during fail-over can be kept less than 5 minutes from alert.
 
 ## OK, here is the solution I came up and tested with.
 
-The solutions consist of two parts:
+## The solution:
+* SUSE Manager host name is managed by __DNS server__. In fail-over scenario the DNS entry must be changed to the IP of standby server.
+* The standby server host name must be changed to the primary hostname during fail-over.
 * postgres streaming replication to replicate the data to standby server.
 * A bash script using rsync to synchronize files to the standby server. [How-to replicate files](files-replication.md)
 
+## The Architecture:
 Below architecture shows the HA/DR architecture using postgres streaming replication:
 For more information [configure postgres replication](postgres-replication-howto.md)
 
