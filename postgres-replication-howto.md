@@ -1,14 +1,15 @@
 # Postgresql High Availability for SUSE Manager 4.2
-The idea is to use postgresql streaming replication with replication slots to maintain a standby SUSE Manager that will be promoted when disaster recovery is needed. The recovery time will be short because the data is already replicated into the standby SUSE Manager DB. And of course the files and rpm files have been also synchronized to the standby SUSE Manager within automated cron jobs. 
+The idea is to use postgresql streaming replication with replication slots to maintain a standby SUSE Manager that will be promoted when disaster recovery is needed. The recovery time is short (approx. 5 minutes) because the data is already replicated into the standby SUSE Manager DB. The files and rpm files have been synchronized to the standby SUSE Manager within automated cron jobs 
+[files-replication.md](.files-replication.md). 
 
-> __*Streaming replication:*__ Streaming replication allows a standby server to stay more up-to-date than is possible with file-based log shipping. The standby connects to the primary, which streams WAL records to the standby as they're generated, without waiting for the WAL file to be filled. __Streaming replication is asynchronous by default__, in which case there is a small delay between committing a transaction in the primary and the changes becoming visible in the standby. This delay is however much smaller than with file-based log shipping, typically under one second assuming the standby is powerful enough to keep up with the load.
+> __*Streaming replication:*__ Streaming replication is a built-in feature of postgresql that allows a standby server to receive the data replicated from the primary database. The standby connects to the primary, which streams WAL records to the standby as they're generated, without waiting for the WAL file to be filled. __Streaming replication is asynchronous by default__, in which case there is a small delay between committing a transaction in the primary and the changes becoming visible in the standby. This delay is however much smaller than with file-based log shipping, typically under one second assuming the standby is powerful enough to keep up with the load.
 To use streaming replication you need to set up a file-based log-shipping standby server. The step that turns a file-based log-shipping standby into streaming replication standby is setting the primary_conninfo setting to point to the primary server. Set listen_addresses and authentication options (see pg_hba.conf) on the primary so that the standby server can connect to the replication pseudo-database on the primary server.
 
 > __*Replication slots*__ provide an automated way to ensure that the primary does not remove WAL segments until they have been received by all standbys, and that the primary does not remove rows which could cause a recovery conflict even when the standby is disconnected.
 In lieu of using replication slots, it is possible to prevent the removal of old WAL segments using wal_keep_size, or by storing the segments in an archive using archive_command. However, these methods often result in retaining more WAL segments than required, whereas replication slots retain only the number of segments known to be needed. On the other hand, replication slots can retain so many WAL segments that they fill up the space allocated for pg_wal; max_slot_wal_keep_size limits the size of WAL files retained by replication slots.
 
 ## How-To:
-In the setup we had the primary SUSE Manager server has IP: 172.28.0.10 and the standby SUSE Manager server has IP: 172.28.0.5
+In the SUSE Manager HA setup the primary SUSE Manager server has IP: e.g. 172.28.0.10 and the standby SUSE Manager server has IP: e.g. 172.28.0.5
 After recovery the standby SUSE Manager will become "new primary".
 
 ## Primary Server configuration:
@@ -22,7 +23,7 @@ CREATE ROLE borep WITH REPLICATION PASSWORD 'testpassword' LOGIN;
 ```
 
 ### postgresql.conf
-In __postgresql.conf__ make sure you put below entries into it, after edit restart postgresql.service on the postgresql primary server.
+In __postgresql.conf__ make sure you put below entries into it, afterwards restart postgresql.service on the postgresql primary server.
 
 Feel free to use rsync as remote copy/synchronization tool.
 ```
@@ -35,7 +36,7 @@ max_wal_senders = 10
 ### Client authentication for replication
 https://www.postgresql.org/docs/current/warm-standby.html#STREAMING-REPLICATION-SLOTS
 
-In pg_hba.conf you want to make sure that the postgresql on the SUSE Manager host allow the replication user from peer standby suse manager server to connect via port 5432.
+In pg_hba.conf on primary you have to make sure that the postgresql on the primary SUSE Manager host allows the replication user from standby connection via port 5432.
 ```
 host    replication     borep   172.28.0.10/24   trust
 host    all     all     172.28.0.1/24 md5
@@ -44,7 +45,7 @@ host    all     all     172.28.0.1/24 md5
 ### Now we start or restart postgresql on the primary SUSE Manager server.
 ```systemctl restart postgresql.service```
 
-## Secondary Server configuration:
+## __Secondary Server configuration:__
 After the primary site is configured for the replication we are ready to start configure standby server:
 ### Use ssh-keys
 Login on the standby server as postgres user:
@@ -56,22 +57,34 @@ Create ssh key pair for postgres user and copy the public key to the authorized_
 As the postgres user does not have a password set and or even passworth authentication is not allowed in your sshd you will not be able to use ssh-copy-id to add the e.g. id_rsa.pub content to the authorized_keys file.
 So simply copy paste the content of /var/lib/pgsql/.ssh/id_rsa.pub to the /var/lib/pgsql/.ssh/authorized_keys file on primary server.
 
-### pg_basebackup
-The next step is to use postgresql command ```pg_basebackup``` to make a so-called base-backup. This means we copy the /var/lib/pgsql/data from primary to the secondary server.
+### configure /var/lib/pgsql/.pgpass for passwordless login
+It is necessary to greate a .pgpass file for the replication user. You could create the file similar like below:
+/var/lib/pgsql/.pgpass
 
-Before execute pg_basebackup you have to cleanup the /var/lib/pgsql/data directory.
+```
+*:*:*:borep:testpassword
+```
+Make sure to use __chmod 600__ for this .pgpass file.
+
+### __pg_basebackup__
+The next step is to use postgresql command ```pg_basebackup``` to make a so-called base-backup from the primary to standby. This means we copy the /var/lib/pgsql/data from primary to the secondary server by using command pg_basebackup.
+
+Before executing pg_basebackup you have to delete the /var/lib/pgsql/data directory.
 You could do it with:
 ```rm -rf /var/lib/pgsql/data```
 
 If the /var/lib/pgsql/data is not empty you will get error message from pg_basebackup.
 
-As you can see from the command below we create a replication slot "boslot1" that will be used for replication. Of course you could name the slot as you wish.
+Use the command below to create a replication slot e.g. "boslot1" that will be used for replication. Of course you could give other name for the slot.
 
-Basebackup command, must be run as postgres user:
+__Basebackup command, must be run as postgres user:__
+```
+su - postgres
 pg_basebackup -h 172.28.0.5 -D /var/lib/pgsql/data -U borep -v -Fp --checkpoint=fast -R --slot=boslot1 -C -Xs
+```
 
-__Verify: in /var/lib/pgsql/data/ a file named standby.signal has been created by the pg_basebackup. This file indicates that this postgresql is in standby mode.__
-After pg_basebackup and hopefully it went successful we have to edit the auto-created file /var/lib/pgsql/data/postgresql.auto.conf on secondary server.
+__Verify: after pg_basebackup in /var/lib/pgsql/data/ a file named standby.signal has been created by the pg_basebackup. This file indicates that this postgresql is in standby mode.__
+After pg_basebackup and hopefully the task went successful we have to double check the auto-created file /var/lib/pgsql/data/postgresql.auto.conf on secondary server.
 * Make sure the slot name is correct. 
 * Make sure the primary_conninfo is correct.
 
