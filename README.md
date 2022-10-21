@@ -1,5 +1,10 @@
 # SUSE Manager / Uyuni - High Availability with postgres streaming replication 
 
+## __Updates:__
+This solution has been tested with SUSE Manager 4.2 & 4.3.
+Migration of SUSE Manager HA 4.2 to 4.3 has been tested and documented ![here](suse-manager-ha-migration.md).
+
+
 ## Why
 Imagine you have a business critical SUSE Manager for patching and configuration management for a large number of systems.
 The headaches starts with thinking about how to make the SUSE Manager server high available in order to allow patching and configuration management with least downtime for the linux systems you manage. *Yes, with least downtime, near zero downtime.*
