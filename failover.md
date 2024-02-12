@@ -1,6 +1,6 @@
 # Fail over to standby SUSE Manager server
 
-Steps to fail over to the standby SUSE Manager server.
+Steps to fail-over to the standby SUSE Manager server.
 
 I assume the existing primary SUSE Manager is broken and shutdown. The standby SUSE Manager server is ready to take over.
 
@@ -17,9 +17,7 @@ We need to do this step because we copied all relevant files from the primary se
 
 All files must be have been copied from the primary server to the standby server. A cron job was setup and did the job on a regular basis. Without correctly copied files the failover will not work. Review the [files-replication.md](../blob/master/files-replication.md) for more information.
 
-```
-
-then start suse manager as root user:
+then start suse manager servicess as root user:
 ```
 systemctl start postgresql.service
 
@@ -27,5 +25,5 @@ spacewalk-service start
 ```
 
 ## Configure DNS to point to the new primary server
-We need to change the DNS record to point to the new primary server. The ip address of the SUSE Manager server record must be changed to the IP of the standby server.
+We need to change the DNS record to point to the new primary server ip while the hostname remains the same. The ip address of the SUSE Manager server record must be changed to the IP of the standby server.
 
